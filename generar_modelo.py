@@ -1,15 +1,8 @@
-"""
-Script para entrenar y guardar el pipeline de PM2.5.
-Se ejecuta automaticamente durante el build de Render.
-Tambien puede ejecutarse localmente:
-    python generar_modelo.py
-Genera: modelo/pipeline_pm25.pkl
-"""
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 import joblib, os
 
 SEED     = 42
@@ -28,15 +21,14 @@ y_cl  = y_raw[mask].reset_index(drop=True)
 X_fin = X_cl[FEATURES]
 
 print(f"Entrenando modelo con {len(X_fin):,} registros...")
-# n_estimators=100 y max_depth=20: archivo ~15 MB en lugar de 1 GB
 pipeline = Pipeline([
     ('imputer', SimpleImputer(strategy='median')),
     ('scaler',  StandardScaler()),
-    ('model',   RandomForestRegressor(
-                    n_estimators=100,
-                    max_depth=20,
-                    random_state=SEED,
-                    n_jobs=-1))
+    ('model',   GradientBoostingRegressor(
+                    n_estimators=200,
+                    max_depth=5,
+                    learning_rate=0.1,
+                    random_state=SEED))
 ])
 pipeline.fit(X_fin, y_cl)
 
@@ -45,7 +37,6 @@ out = 'modelo/pipeline_pm25.pkl'
 joblib.dump(pipeline, out, compress=3)
 print(f"Modelo guardado en: {out}  ({os.path.getsize(out)/1e6:.1f} MB)")
 
-# Verificacion rapida
 ej = pd.DataFrame([{'DEWP': 2.0, 'month': 1, 'day': 15,
                      'TEMP': -5.0, 'Iws': 5.37, 'PRES': 1016.0}])
 print(f"Prediccion de prueba: PM2.5 = {pipeline.predict(ej)[0]:.2f} ug/m3")
