@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: pm25-predictor-20230047
+    env: python
+    buildCommand: pip install -r requirements.txt && python generar_modelo.py
+    startCommand: gunicorn app:app
+    plan: free

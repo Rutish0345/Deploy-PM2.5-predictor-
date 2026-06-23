@@ -1,0 +1,10 @@
+# Modelo (muy grande para GitHub, se genera en Render durante el build)
+modelo/
+*.pkl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
