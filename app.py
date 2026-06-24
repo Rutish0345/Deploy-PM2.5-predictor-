@@ -3,6 +3,7 @@ import os, joblib, numpy as np
 
 app = Flask(__name__)
 
+# Lazy loading: carga el modelo solo al primer request (ahorra RAM en startup)
 _pipeline = None
 
 def get_pipeline():
@@ -14,13 +15,14 @@ def get_pipeline():
 FEATURES = ['DEWP', 'month', 'day', 'TEMP', 'Iws', 'PRES']
 
 FIELDS = [
-    {'name': 'DEWP',  'label': 'Punto de rocío',            'unit': '°C',   'min': -40,  'max': 28,    'step': '0.1', 'example': '2'},
+    {'name': 'DEWP',  'label': 'Punto de rocio',            'unit': 'C',    'min': -40,  'max': 28,    'step': '0.1', 'example': '2'},
     {'name': 'month', 'label': 'Mes',                        'unit': '1-12', 'min': 1,    'max': 12,    'step': '1',   'example': '1'},
-    {'name': 'day',   'label': 'Día del mes',                'unit': '1-31', 'min': 1,    'max': 31,    'step': '1',   'example': '15'},
-    {'name': 'TEMP',  'label': 'Temperatura',                'unit': '°C',   'min': -19,  'max': 42,    'step': '0.1', 'example': '-5'},
-    {'name': 'Iws',   'label': 'Velocidad del viento (Iws)', 'unit': 'm/s',  'min': 0.45, 'max': 565.5, 'step': '0.1', 'example': '5.37'},
-    {'name': 'PRES',  'label': 'Presión atmosférica',        'unit': 'hPa',  'min': 991,  'max': 1046,  'step': '0.1', 'example': '1016'},
+    {'name': 'day',   'label': 'Dia del mes',                'unit': '1-31', 'min': 1,    'max': 31,    'step': '1',   'example': '15'},
+    {'name': 'TEMP',  'label': 'Temperatura',                'unit': 'C',    'min': -19,  'max': 42,    'step': '0.1', 'example': '-5'},
+    {'name': 'Iws',   'label': 'Velocidad del viento (Iws)', 'unit': 'm/s',  'min': 0.45, 'max': 565.5, 'step': '0.01', 'example': '5.37'},
+    {'name': 'PRES',  'label': 'Presion atmosferica',        'unit': 'hPa',  'min': 991,  'max': 1046,  'step': '0.1', 'example': '1016'},
 ]
+
 
 def nivel_calidad(pm25):
     if pm25 <= 12:
@@ -35,6 +37,7 @@ def nivel_calidad(pm25):
         return 'Muy no saludable', '#8e44ad'
     else:
         return 'Peligrosa', '#922b21'
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -55,10 +58,11 @@ def index():
             if not (1 <= valores['month'] <= 12):
                 raise ValueError('El mes debe estar entre 1 y 12.')
             if not (1 <= valores['day'] <= 31):
-                raise ValueError('El día debe estar entre 1 y 31.')
+                raise ValueError('El dia debe estar entre 1 y 31.')
             if valores['Iws'] < 0:
                 raise ValueError('La velocidad del viento no puede ser negativa.')
 
+            # Prediccion usando numpy (sin pandas para ahorrar RAM)
             X = np.array([[valores[f] for f in FEATURES]])
             pred = get_pipeline().predict(X)[0]
             prediccion = max(0, round(float(pred), 2))
@@ -76,6 +80,7 @@ def index():
                            color=color,
                            error=error,
                            valores=valores)
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
